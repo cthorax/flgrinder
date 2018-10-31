@@ -246,7 +246,6 @@ def main():
         if current_step == 'zailing to court':
             end_progress = 0
             trouble_progress = 0
-
             draw(browser)
             current_cards = check_card(browser)
 
