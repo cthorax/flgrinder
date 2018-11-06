@@ -377,8 +377,51 @@ def main():
                 else:
                     draw(browser)
                     hand_dict = check_card(browser, hand_size=4)
-                    if "" in hand_dict.keys():
-                        pass
+                    if tally_dict['nodule of fecund amber'] >= 5:
+                        fluke_trade_flag = 'why'
+                    elif tally_dict["diary of the dead"] >= 5:
+                        fluke_trade_flag = 'what'
+                    else:
+                        fluke_trade_flag = None
+
+                    if tally_dict['sudden insight'] >= 3:
+                        battles_flag = "wisdom"
+                    elif tally_dict['hard earned lesson'] >= 3:
+                        battles_flag = "pleasure"
+                    elif tally_dict['confident smile'] >= 3:
+                        battles_flag = "truth"
+                    elif tally_dict['hastily scrawled note'] >= 3:
+                        battles_flag = "experience"
+                    else:
+                        battles_flag = None
+
+                    if tally_dict["journal of infamy"] > 0:
+                        losing_flag = 'dubious_attribution'
+                    elif tally_dict['cryptic clue'] > 0:
+                        losing_flag = 'just one'
+                    else:
+                        losing_flag = None
+
+
+                    if "do you recall how they came to that place" in hand_dict.keys() and fluke_trade_flag:
+                        pick_card(browser, position=hand_dict["do you recall how they came to that place"])
+                        storylet_button(browser, target_title=fluke_trade_flag)
+                        next_button(browser)
+
+                    elif "the end of battles" in hand_dict.keys() and battles_flag:
+                        pick_card(browser, position=hand_dict["the end of battles"])
+                        storylet_button(browser, target_title=battles_flag)
+                        next_button(browser)
+                    elif "losing" in hand_dict.keys() and losing_flag:
+                        pick_card(browser, position=hand_dict["losing"])
+                        storylet_button(browser, target_title=losing_flag)
+                        next_button(browser)
+                    elif "a card game" in hand_dict.keys():
+                        pick_card(browser, position=hand_dict["a card game"])
+                        storylet_button(browser, target_title="deal yourself in")
+                        next_button(browser)
+                    else:
+                        current_step = 'leave nadir'
 
             elif current_step == 'leave nadir':
                 pass
