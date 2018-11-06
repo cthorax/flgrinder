@@ -357,7 +357,7 @@ def main():
                 elif tally_dict["winsome dispossessed orphan"] > 0:
                     current_step = 'go to labyrinth'
 
-            elif current_step == 'payment'
+            elif current_step == 'payment':
                 travel(browser, target='your lodgings')
                 location_button(browser, target_title="a professional reward")
                 storylet_button(browser, target_title="the wage of a crooked cross")
@@ -438,7 +438,7 @@ def main():
                 sell_button.click()
 
                 result = True
-                while result == True
+                while result == True:
                     plus_ten_button = browser.find_element_by_css_selector(css_selector="body > div:nth-child(13) > div > div > div:nth-child(2) > div:nth-child(5) > form > div.exchange-ui__controls > button:nth-child(5)")
                     disable_text = plus_ten_button.get_attribute('outerHTML')
                     disabled = 'disabled=""' in disable_text
@@ -465,7 +465,7 @@ def main():
                 buy_button.click()
 
                 result = True
-                while result == True
+                while result == True:
                     plus_ten_button = browser.find_element_by_css_selector(css_selector="body > div:nth-child(13) > div > div > div:nth-child(2) > div:nth-child(5) > form > div.exchange-ui__controls > button:nth-child(5)")
                     disable_text = plus_ten_button.get_attribute('outerHTML')
                     disabled = 'disabled=""' in disable_text
