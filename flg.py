@@ -60,7 +60,7 @@ def location(browser, tally_dict):
     if location_text == "wolfstack docks":
         current_step = 'arrive at london'
 
-    elif location_text == "":
+    elif location_text == "the forgotten quarter":
         current_step = 'go to nadir'
 
     elif location_text == "":
@@ -197,6 +197,11 @@ def travel(browser, target):
         map_target = "#main > div:nth-child(1) > span > div > div > div > div:nth-child(12) > div"
     elif target == "docks":
         map_target = "#main > div:nth-child(1) > span > div > div > div > div:nth-child(2) > div"
+    elif target == "the forgotten quarter":
+        map_target = "#main > div:nth-child(1) > span > div > div > div > div:nth-child(7) > div"
+    elif target == "your lodgings":
+        map_target = "#main > div:nth-child(1) > span > div > div > div > div:nth-child(1) > div"
+
     else:
         assert False, "you probably need to add a case for '{target}'".format(target=target)
 
