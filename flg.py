@@ -22,13 +22,13 @@ def clean_text(text):
     forbidden = """'".?,!:;"""
     for char in forbidden:
         temp_string = temp_string.replace(char, "")
-    space = """-_"""
+    space = """-_–()"""
     for char in space:
         temp_string = temp_string.replace(char, " ")
     return temp_string
 
 
-def login(browser):
+def login():
     login_url = "http://www.fallenlondon.com"
 
     # go to the site, log in
@@ -37,7 +37,7 @@ def login(browser):
     input("hit enter when you've logged in, ya goober. ")
 
 
-def location(browser, tally_dict):
+def get_location():
     """figure out where in the loop you are
 
     :param browser: a selenium driver instance
@@ -45,25 +45,38 @@ def location(browser, tally_dict):
     """
 
     location_selector = "#root > div > div > div:nth-child(4) > div.content.container > div > div.col-tertiary > div > div > p.heading.heading--2"
-    perhaps_selector = "#main > div.buttons.buttons--left.buttons--storylet-exit-options > a"
+    alt_location_selector = "#root > div > div > div:nth-child(5) > div.content.container > div > div.col-tertiary > div > div > p.heading.heading--2"
+    perhaps_selector = "#main > div.buttons.buttons--left.buttons--storylet-exit-options > button"
+    headers_selector = "#main > div.media.media--root > div.media__body > h1"
     location_text = None
     
     try:
         perhaps_button = browser.find_element_by_css_selector(css_selector=perhaps_selector)
         perhaps_button.click()
-        sleep(1)
         location_text = clean_text(browser.find_element_by_css_selector(css_selector=location_selector).text)
         
     except sexcept.NoSuchElementException:
-        location_text = clean_text(browser.find_element_by_css_selector(css_selector=location_selector).text)
+        try:
+            location_text = clean_text(browser.find_element_by_class_name("heading--2").text)
+        except sexcept.NoSuchElementException:
+            try:
+                location_text = clean_text(browser.find_element_by_css_selector(css_selector=alt_location_selector).text)
+            except sexcept.NoSuchElementException:
+                location_text = clean_text(browser.find_element_by_css_selector(css_selector=headers_selector).text)
 
-    if location_text == "wolfstack docks":
-        current_step = 'arrive at london'
+    return location_text
+
+
+def location(tally_dict):
+    location_text = get_location()
+
+    if location_text == "wolfstack docks" or location_text == 'your lodgings':
+        current_step = 'london'
 
     elif location_text == "the forgotten quarter":
         current_step = 'go to nadir'
 
-    elif location_text == "":
+    elif location_text == "cave of the nadir":
         current_step = 'at nadir'
 
     elif location_text == "":
@@ -87,16 +100,22 @@ def location(browser, tally_dict):
         else:
             current_step = 'zailing to court'
 
-    elif location_text == 'the court of the wakeful eye':
+    elif location_text == 'the court of the wakeful eye' or location_text == 'court of the wakeful eye':
         current_step = 'enigma trade'
 
     elif location_text == "":
         current_step = 'depart court'
 
+    elif location_text == "winking isle" or location_text == "the well":
+        current_step = 'winking isle'
+
+    elif location_text == 'the empress court':
+        current_step = "at court"
+
     return current_step
 
 
-def check_tally(browser):
+def check_tally():
     """update the internal counts of shit, return a dictionary of shit
 
     :param browser: selenium driver instance
@@ -106,15 +125,14 @@ def check_tally(browser):
     tally_dict = {
         "tribute": 0,
         "irrigo": 0,
+        "fleeting recollections": 0,
         "approaching journeys end": 0,
         "troubled waters": 0,
-        "dramatic tension": 0,
-        "payment": 0,
-        "orphan": 0,
-        "rostygold": 0,
+        "winsome dispossessed orphan": 0,
+        "piece of rostygold": 0,
         "searing enigma": 0,
         "diary of the dead": 0,
-        "fecund amber": 0,
+        "nodule of fecund amber": 0,
         "fluke core": 0,
         "sudden insight": 0,
         "hard earned lesson": 0,
@@ -123,48 +141,65 @@ def check_tally(browser):
         "journal of infamy": 0,
         "cryptic clue": 0,
         "professional perk": 0,
-        "an earnest of payment": 0
+        "an earnest of payment": 0,
+        "fasting and meditating to a foolish end": 0,
+        "seeking mr eatens name": 0,
+        "making waves": 0,
+        "notability": 0
     }
 
-    myself_button = browser.find_element_by_css_selector(css_selector="#root > div > div > div:nth-child(4) > div.content.container > div > div.col-primary > nav > ul > li:nth-child(3) > a")
-    myself_button.click()
-    sleep(1)
+    browser.get("https://www.fallenlondon.com/myself")
 
-    quality_elements = browser.find_elements_by_class_name(name="item__desc")
+    quality_elements = browser.find_elements_by_class_name(name="quality-item__name")
     for quality in quality_elements:
-        myself_item = clean_text(quality.text)
+        myself_item = quality.text
 
-        if "\n" in myself_item:
-            if "tribute " in myself_item and tally_dict["tribute"] == 0:
-                quantity = int(myself_item.split("\n")[0][8:])
-                tally_dict["tribute"] = quantity
-            elif "irrigo " in myself_item and tally_dict["irrigo"] == 0:
-                quantity = int(myself_item.split("\n")[0][8:])
-                tally_dict["irrigo"]=  quantity
-            elif "dramatic tension " in myself_item and tally_dict["dramatic tension"] == 0:
-                quantity = int(myself_item.split("\n")[0].split(" - ")[0][25:])
-                tally_dict["dramatic tension"] = quantity
-            elif "approaching journeys end " in myself_item and tally_dict["approaching journeys end"] == 0:
-                quantity = int(myself_item.split("\n")[0].split(" - ")[0][25:])
-                tally_dict["approaching journeys end"] = quantity
-            elif "troubled waters " in myself_item and tally_dict["troubled waters"] == 0:
-                quantity = int(myself_item.split("\n")[0].split(" - ")[0][16:])
-                tally_dict["troubled waters"] = quantity
+        if "Tribute " in myself_item and tally_dict["tribute"] == 0:
+            quantity = int(myself_item.split("\n")[0][8:])
+            tally_dict["tribute"] = quantity
+        elif "Irrigo " in myself_item and tally_dict["irrigo"] == 0:
+            quantity = int(myself_item.split("\n")[0][6:])
+            tally_dict["irrigo"]=  quantity
+        elif "Fleeting Recollections" in myself_item and tally_dict["fleeting recollections"] == 0:
+            tally_dict["fleeting recollections"] = 1
+        elif "Approaching Journey's End " in myself_item and tally_dict["approaching journeys end"] == 0:
+            quantity = int(myself_item.split("\n")[0].split(" - ")[0][25:])
+            tally_dict["approaching journeys end"] = quantity
+        elif "Troubled Waters " in myself_item and tally_dict["troubled waters"] == 0:
+            quantity = int(myself_item.split("\n")[0].split(" - ")[0][16:])
+            tally_dict["troubled waters"] = quantity
+        elif "Fasting and Meditating to a Foolish End " in myself_item and tally_dict["fasting and meditating to a foolish end"] == 0:
+            quantity = int(myself_item.split("\n")[0].split(" - ")[0][40:])
+            tally_dict["fasting and meditating to a foolish end"] = quantity
+        elif "Seeking Mr Eaten's Name " in myself_item and tally_dict["seeking mr eatens name"] == 0:
+            quantity = int(myself_item.split("\n")[0].split(" - ")[0][24:])
+            tally_dict["seeking mr eatens name"] = quantity
+        elif "Making Waves " in myself_item and tally_dict["making waves"] == 0:
+            quantity = int(myself_item.split("\n")[0].split(" - ")[0][13:])
+            tally_dict["making waves"] = quantity
+        elif "Notability " in myself_item and tally_dict["notability"] == 0:
+            quantity = int(myself_item.split("\n")[0].split(" - ")[0][11:])
+            tally_dict["notability"] = quantity
 
-    possessions_button = browser.find_element_by_css_selector(css_selector="#root > div > div > div:nth-child(4) > div.content.container > div > div.col-primary > nav > ul > li:nth-child(4) > a")
-    possessions_button.click()
-    sleep(1)
+    browser.get("https://www.fallenlondon.com/possessions")
 
-    item_elements = browser.find_elements_by_class_name(name="icon--inventory")
-    for item in item_elements:
+    equipment_elements = browser.find_elements_by_class_name(name="icon--available-item")
+    for item in equipment_elements:
         not_used, item_name, also_not_used, quantity = item.get_attribute('innerHTML').split("><")
-        item_name = clean_text(item_name)[8:].split("aria-label")[0][:-1]
+        item_name = clean_text(item_name[8:].split("aria-label")[0][:-1])
         quantity = int(quantity.split(">")[1].split("<")[0])
 
         tally_dict = update_tally(tally_dict, item_name, quantity)
 
-    story_button = browser.find_element_by_css_selector(css_selector="#root > div > div > div:nth-child(4) > div.content.container > div > div.col-primary > nav > ul > li:nth-child(1) > a")
-    story_button.click()
+    item_elements = browser.find_elements_by_class_name(name="icon--inventory")
+    for item in item_elements:
+        not_used, item_name, also_not_used, quantity = item.get_attribute('innerHTML').split("><")
+        item_name = clean_text(item_name[8:].split("aria-label")[0][:-1])
+        quantity = int(quantity.split(">")[1].split("<")[0])
+
+        tally_dict = update_tally(tally_dict, item_name, quantity)
+
+    browser.get("https://www.fallenlondon.com/")
 
     return tally_dict
 
@@ -177,211 +212,237 @@ def update_tally(tally_dict, item_name, quantity):
     return tally_dict
 
 
-def check_actions(browser):
-    # check the current number of actions, if zero wait some amount of time
-
-    actions_selector = "#root > div > div > div:nth-child(4) > div.content.container > div > div.col-secondary > ul.items.items--list.items--currencies > li:nth-child(1) > div.item__desc > div > div > span > div.item__value"
-    actions_display = browser.find_element_by_css_selector(css_selector=actions_selector)
-    actions, max_actions = actions_display.text.split('/')
+def check_actions():
+    # check the current number of actions
+    actions_display = browser.find_element_by_class_name("item__desc")
+    actions = actions_display.text.split('\n')[1].split('/')[0]
 
     return int(actions)
 
 
-def travel(browser, target):
+def travel(target):
     # clicks on the map and then goes where the target is
-    travel_selector = "#root > div > div > div:nth-child(4) > div.content.container > div > div.col-tertiary > div > div > button"
-    travel_button = browser.find_element_by_css_selector(css_selector=travel_selector)
-    travel_button.click()
+    location = get_location()
+    if location != target:
+        travel_button = browser.find_element_by_class_name("travel-button--infobar")
+        travel_button.click()
 
-    if target == "labyrinth":
-        map_target = "#main > div:nth-child(1) > span > div > div > div > div:nth-child(12) > div"
-    elif target == "docks":
-        map_target = "#main > div:nth-child(1) > span > div > div > div > div:nth-child(2) > div"
-    elif target == "the forgotten quarter":
-        map_target = "#main > div:nth-child(1) > span > div > div > div > div:nth-child(7) > div"
-    elif target == "your lodgings":
-        map_target = "#main > div:nth-child(1) > span > div > div > div > div:nth-child(1) > div"
+        area_buttons = browser.find_elements_by_class_name("map__area")
+        for area_button in area_buttons:
+            area_name = clean_text(area_button.find_element_by_class_name("map__image").get_attribute('outerHTML')[10:].split('"')[0])
+            if target == area_name:
+                area_button.click()
+                return True
 
-    else:
-        assert False, "you probably need to add a case for '{target}'".format(target=target)
-
-    map_button = browser.find_element_by_css_selector(css_selector=map_target).click()
-    sleep(1)
+        return False
 
 
-def favor_trade(browser):
-    location_button(browser=browser, target_title="offering tribute to the court of the wakeful eye")
-    success = True
-    while success:
-        success = storylet_button(browser=browser, target_title="offer a winsome dispossessed orphan")
-        if success:
-            next_button(browser=browser)
-
-
-def storylet_button(browser, target_title):
-    sleep(1)
-    button_selector = "#main > div:nth-child(2) > div:nth-child({position}) > div > div.media__body.branch__body > div.buttons.storylet__buttons > a"
-    title_selector = "#main > div:nth-child(2) > div:nth-child({position}) > div > div.media__body.branch__body > div:nth-child(1) > h2"
-    for position in range(1, 99):
-        try:
-            title = clean_text(browser.find_element_by_css_selector(css_selector=title_selector.format(position=position)).text)
-        except (sexcept.NoSuchElementException, sexcept.StaleElementReferenceException):
-            result = False
-            break
-
+def storylet_button(target_title, safe=True):
+    result = None
+    storylets = browser.find_elements_by_class_name('branch__body')
+    for storylet in storylets:
+        title = clean_text(storylet.find_element_by_class_name('branch__title').text)
         if title == target_title:
-            button = browser.find_element_by_css_selector(css_selector=button_selector.format(position=position))
-            disable_text = button.get_attribute('outerHTML')
-            disabled = 'disabled=""' in disable_text
+            go_button = storylet.find_element_by_class_name('button--go')
+            disabled = 'disabled=""' in go_button.get_attribute('outerHTML')
+
             if disabled:
                 result = False
             else:
-                button.click()
+                go_button.click()
                 result = True
+                break
 
+    if safe:
+        assert result
     return result
 
 
-def location_button(browser, target_title):
-    sleep(1)
-    title_selector = "#main > div:nth-child(3) > div:nth-child({position}) > div > div.storylet__body > h2"
-    button_selector = "#main > div:nth-child(3) > div:nth-child({position}) > div > div.storylet__body > div > a"
-    for position in range(1, 99):
-        try:
-            title = clean_text(browser.find_element_by_css_selector(css_selector=title_selector.format(position=position)).text)
-        except sexcept.NoSuchElementException:
-            break
-
+def location_button(target_title, safe=True):
+    result = None
+    storylets = browser.find_elements_by_class_name('storylet__body')
+    for storylet in storylets:
+        title = clean_text(storylet.find_element_by_class_name('storylet__heading').text)
         if title == target_title:
-            button = browser.find_element_by_css_selector(css_selector=button_selector.format(position=position))
-            button.click()
+            go_button = storylet.find_element_by_class_name('button--go')
+            disabled = 'disabled=""' in go_button.get_attribute('outerHTML')
+
+            if disabled:
+                result = False
+            else:
+                go_button.click()
+                result = True
+                break
+
+    if safe:
+        assert result
+    return result
 
 
-def next_button(browser):
-    sleep(1)
-    button_selector = "#main > div > div.buttons.buttons--storylet-exit-options > a"
-    alt_button_selector = "#main > div > div.buttons.buttons--storylet-exit-options > a:nth-child(1)"
-    try:
-        button = browser.find_element_by_css_selector(css_selector=button_selector)
-    except sexcept.NoSuchElementException:
-        try:
-            button = browser.find_element_by_css_selector(css_selector=alt_button_selector)
-        except sexcept.NoSuchElementException:
-            raise
-
+def next_button():
+    button = browser.find_element_by_class_name('button--primary')
     button.click()
-    sleep(1)
 
 
-def draw(browser):
-    deck_selector = "#main > div.cards > div.deck-container > div.deck"
-    deck = browser.find_element_by_css_selector(css_selector=deck_selector)
+def draw():
+    deck = browser.find_element_by_class_name('deck')
     deck.click()
-    sleep(1)
 
 
-def check_card(browser, hand_size=3):
+def check_card(hand_size=3):
     card_selector = "#main > div.cards > div.hand > div:nth-child({position}) > div > div > div"
     card_dict = {}
     for pos in range(1, hand_size+1):     # +1?
         card = browser.find_element_by_css_selector(css_selector=card_selector.format(position=pos))
-        card_title = clean_text(card.get_attribute('innerHTML')).split(" aria-label")[0][9:]
+        card_title = clean_text(card.get_attribute('innerHTML').split(" aria-label")[0][9:])
         card_dict[card_title] = pos
     return card_dict
 
 
-def pick_card(browser, position):
+def pick_card(position):
     card_selector = "#main > div.cards > div.hand > div:nth-child({position}) > div > div > div"
     card = browser.find_element_by_css_selector(css_selector=card_selector.format(position=position))
     card.click()
-    sleep(1)
 
 
-def zailing(browser, tally_dict):
-    draw(browser)
-    current_cards = check_card(browser)
+def zailing(tally_dict):
+    draw()
+    current_cards = check_card()
 
     if 'a wily zailor' in current_cards:
-        pick_card(browser, position=current_cards['a wily zailor'])
-        next_button(browser)
-        tally_dict = read_results(browser=browser, tally_dict=tally_dict)
-        draw(browser)
+        pick_card(position=current_cards['a wily zailor'])
+        storylet_button(target_title='steam straight through the beechey currents ')
+        tally_dict = read_results(tally_dict=tally_dict)
+        next_button()
+        draw()
     else:
-        location_button(browser=browser, target_title='steam prudently')
-        storylet_button(browser=browser, target_title='a cautious captain')
-        tally_dict = read_results(browser=browser, tally_dict=tally_dict)
-        next_button(browser)
+        location_button(target_title='steam prudently')
+        storylet_button(target_title='a cautious captain')
+        tally_dict = read_results(tally_dict=tally_dict)
+        next_button()
 
     return tally_dict
 
 
-def read_results(browser, tally_dict):
-    sleep(1)
+def read_results(tally_dict):
     results_list = browser.find_elements_by_class_name(name="quality-update__body")
     for result in results_list:
         if "new total" in result.text:  # item updates
-            item_name, quantity = clean_text(result.text).split(" x ")[1].split(" (new total ")
-            quantity = int(quantity[:-1])
+            item_name, quantity = result.text.split(" x ")[1].split(" (new total ")
+            item_name = clean_text(item_name)
+            try:
+                quantity = int(quantity.split(" - ")[0])
+            except ValueError:
+                quantity = quantity.split(" - ")[0]
+                quantity = clean_text(quantity).strip()
+                quantity = int(quantity)
             tally_dict = update_tally(tally_dict, item_name, quantity)
 
         elif "shows your progress" in result.text:
-            item_name, quantity = result.text.split(" has increased to ")
-            quantity = int(quantity.split(" - ")[0])
+            item_name, not_used, quantity = result.text.split("\n")
+            quantity = int(quantity)
+            item_name = clean_text(item_name.split(" shows your progress in the venture")[0])
             tally_dict = update_tally(tally_dict, item_name, quantity)
 
         elif "gained a new quality" in result.text:
-            item_name, quantity = result.text.split(" has increased to ")
+            item_name, quantity = result.text[29:].split(" at ")
+            item_name = clean_text(item_name)
             quantity = int(quantity.split(" - ")[0])
             tally_dict = update_tally(tally_dict, item_name, quantity)
 
         elif "has increased to" in result.text:
             item_name, quantity = result.text.split(" has increased to ")
-            quantity = int(quantity.split(" - ")[0])
+            item_name = clean_text(item_name)
+            try:
+                quantity = int(quantity.split(" - ")[0])
+            except ValueError:
+                quantity = int(quantity.split("!")[0])
             tally_dict = update_tally(tally_dict, item_name, quantity)
+
+        elif "An occurrence" in result.text:  # item updates
+            item_name, quantity = result.text[21:].split("' Quality is now ")
+            item_name = clean_text(item_name)
+            quantity = int(quantity.split(' - ')[0])
+            tally_dict = update_tally(tally_dict, item_name, quantity)
+
+        elif " Quality has gone!" in result.text:  # item updates
+            item_name = result.text[6:-19]
+            item_name = clean_text(item_name)
+            tally_dict = update_tally(tally_dict, item_name, 0)
+
 
     return tally_dict
 
 
 def main():
+    global browser
     browser = webdriver.Chrome("chromedriver.exe", options=chrome_options)
-    login(browser)
-    tally_dict = check_tally(browser)
-    current_step = location(browser, tally_dict)
+    browser.implicitly_wait(10)
+    login()
+    tally_dict = check_tally()
+    current_step = location(tally_dict)
 
     while True:
-        actions = check_actions(browser)
+        actions = check_actions()
         if actions >= 5:
+
             if current_step == 'london':
-                tally_dict = check_tally(browser)
-                if tally_dict['an earnest of payment'] > 0:
+                if tally_dict["seeking mr eatens name"] > 70:
+                    current_step = 'go to court'
+                elif tally_dict['an earnest of payment'] > 0:
                     current_step = 'payment'
-                elif tally_dict['irrigo'] == 0:
-                    current_step = 'go to nadir'
-                elif tally_dict['searing enigma'] > 0:
+                elif tally_dict['searing enigma'] > 0 or tally_dict['winsome dispossessed orphan'] == 0:
                     current_step = 'orphan trade'
+                elif tally_dict['fleeting recollections'] == 1:
+                    current_step = 'clear irrigo'
                 elif tally_dict["winsome dispossessed orphan"] > 0:
                     current_step = 'go to labyrinth'
+                elif tally_dict["tribute"] > 19:
+                    current_step = 'depart london'
 
             elif current_step == 'payment':
-                travel(browser, target='your lodgings')
-                location_button(browser, target_title="a professional reward")
-                storylet_button(browser, target_title="the wage of a crooked cross")
-                next_button(browser)
-                current_step = 'london'
+                travel(target='your lodgings')
+                location_button(target_title="a professional reward")
+                if tally_dict['professional perk'] == 4:
+                    storylet_button(target_title="use your professional perks")
+                    next_button()
+                    storylet_button(target_title="gain a trade secret")
+                    tally_dict['professional perk'] = 0
+                else:
+                    storylet_button(target_title="the wage of a crooked cross")
+                    next_button()
+                    tally_dict['an earnest of payment'] = 0
+                    current_step = 'london'
+
+            elif current_step == 'clear irrigo':
+                location_button(target_title="fleeting recollections")
+                storylet_button(target_title='call it to mind')
+                next_button()
+
+                tally_dict['fleeting recollections'] = 0
+                tally_dict['irrigo'] = 0
+
+                current_step = 'go to nadir'
 
             elif current_step == 'go to nadir':
-                travel(browser, target='the forgotten quarter')
-                location_button(browser, target_title="return to the cave of the nadir")
-                storylet_button(browser, target_title='make the journey')
-                current_step = 'at nadir'
+                if tally_dict['irrigo'] >= 1:
+                    travel(target='your lodgings')
+                    current_step = 'leave nadir'
+                else:
+                    travel(target='the forgotten quarter')
+                    location_button(target_title="return to the cave of the nadir")
+                    storylet_button(target_title='make the journey')
+                    next_button()
+                    current_step = 'at nadir'
 
 
             elif current_step == 'at nadir':
                 if tally_dict['irrigo'] >= 6:
                     current_step = 'leave nadir'
+
                 else:
-                    draw(browser)
-                    hand_dict = check_card(browser, hand_size=4)
+                    draw()
+                    hand_dict = check_card(hand_size=4)
                     if tally_dict['nodule of fecund amber'] >= 5:
                         fluke_trade_flag = 'why'
                     elif tally_dict["diary of the dead"] >= 5:
@@ -408,57 +469,86 @@ def main():
                         losing_flag = None
 
 
-                    if "do you recall how they came to that place" in hand_dict.keys() and fluke_trade_flag:
-                        pick_card(browser, position=hand_dict["do you recall how they came to that place"])
-                        storylet_button(browser, target_title=fluke_trade_flag)
-                        next_button(browser)
+                    if fluke_trade_flag is None:
+                        current_step = 'leave nadir'
+
+                    elif "do you recall how they came to that place" in hand_dict.keys() and fluke_trade_flag:
+                        pick_card(position=hand_dict["do you recall how they came to that place"])
+                        storylet_button(target_title=fluke_trade_flag)
+                        tally_dict = read_results(tally_dict)
+                        next_button()
 
                     elif "the end of battles" in hand_dict.keys() and battles_flag:
-                        pick_card(browser, position=hand_dict["the end of battles"])
-                        storylet_button(browser, target_title=battles_flag)
-                        next_button(browser)
+                        pick_card(position=hand_dict["the end of battles"])
+                        storylet_button(target_title=battles_flag)
+                        tally_dict = read_results(tally_dict)
+                        next_button()
+
                     elif "losing" in hand_dict.keys() and losing_flag:
-                        pick_card(browser, position=hand_dict["losing"])
-                        storylet_button(browser, target_title=losing_flag)
-                        next_button(browser)
+                        pick_card(position=hand_dict["losing"])
+                        storylet_button(target_title=losing_flag)
+                        tally_dict = read_results(tally_dict)
+                        next_button()
+
                     elif "a card game" in hand_dict.keys():
-                        pick_card(browser, position=hand_dict["a card game"])
-                        storylet_button(browser, target_title="deal yourself in")
-                        next_button(browser)
+                        pick_card(position=hand_dict["a card game"])
+                        storylet_button(target_title="deal yourself in")
+                        tally_dict = read_results(tally_dict)
+                        next_button()
+
                     else:
                         current_step = 'leave nadir'
 
             elif current_step == 'leave nadir':
-                pass
+                location_button(target_title="leave the cave of the nadir")
+                storylet_button(target_title='leave')
+                next_button()
+                current_step = 'london'
+
 
             elif current_step == 'orphan trade':
-                bazaar_button = browser.find_element_by_css_selector(css_selector="#root > div > div > div:nth-child(4) > div.content.container > div > div.col-primary > nav > ul > li:nth-child(5) > a")
+                bazaar_button = browser.find_element_by_css_selector(css_selector="#root > div > div > div:nth-child(5) > div.content.container > div > div.col-primary > nav > ul > li:nth-child(5) > a")
                 bazaar_button.click()
 
                 search_bar = browser.find_element_by_css_selector(css_selector="#main > div > span > div > div > div.stack-content.stack-content--3-of-4.shop > input")
-                search_bar.clear()
-                search_bar.send_keys("searing enigma")
 
-                sell_button = browser.find_element_by_css_selector(css_selector="#main > div > span > div > div > div.stack-content.stack-content--3-of-4.shop > li > div.js-item-controls.item__controls > a")
-                sell_button.click()
+                quantity = tally_dict["searing enigma"]
+                if quantity > 0:
+                    search_bar.clear()
+                    search_bar.send_keys("searing enigma")
 
-                result = True
-                while result == True:
-                    plus_ten_button = browser.find_element_by_css_selector(css_selector="body > div:nth-child(13) > div > div > div:nth-child(2) > div:nth-child(5) > form > div.exchange-ui__controls > button:nth-child(5)")
-                    disable_text = plus_ten_button.get_attribute('outerHTML')
-                    disabled = 'disabled=""' in disable_text
+                    sell_button = browser.find_element_by_css_selector(css_selector="#main > div > span > div > div > div.stack-content.stack-content--3-of-4.shop > li > div.js-item-controls.item__controls > a")
+                    sell_button.click()
 
-                    if disabled:
-                        result = False
-                    else:
-                        plus_ten_button.click()
-                        result = True
+                    quantity_entry = browser.find_element_by_css_selector(css_selector="body > div:nth-child(13) > div > div > div:nth-child(2) > div:nth-child(5) > form > div.exchange-ui__controls > input")
+                    quantity_entry.clear()
+                    quantity_entry.send_keys(str(quantity))
 
-                final_sale_button = browser.find_element_by_css_selector(css_selector="body > div:nth-child(13) > div > div > div:nth-child(2) > div:nth-child(5) > form > div.exchange-ui__submit-button-container > button")
-                final_sale_button.click()
+                    final_sale_button = browser.find_element_by_css_selector(css_selector="body > div:nth-child(12) > div > div > div:nth-child(2) > div:nth-child(5) > form > div.exchange-ui__submit-button-container > button")
+                    final_sale_button.click()
 
-                close_button = browser.find_element_by_css_selector(css_selector="body > div:nth-child(13) > div > div > div.exchange-ui__close-button--md-up > span > span.fa.fa-inverse.fa-stack-1x.fa-close")
-                close_button.click()
+                    close_button = browser.find_element_by_css_selector(css_selector="body > div:nth-child(12) > div > div > div.exchange-ui__close-button--md-up > span > span.fa.fa-inverse.fa-stack-1x.fa-close")
+                    close_button.click()
+
+                quantity = 5 - tally_dict["diary of the dead"]
+                if quantity > 0:
+                    cryptics_button = browser.find_element_by_css_selector(css_selector="#main > div > span > div > div > div.nav.nav--stacked.nav--stacked--1-of-4.nav--stacked--roman > div > nav > ol > li:nth-child(13) > a")
+                    cryptics_button.click()
+
+                    search_bar.clear()
+                    search_bar.send_keys("diary of the dead")
+                    buy_button = browser.find_element_by_css_selector(css_selector="#main > div > span > div > div > div.stack-content.stack-content--3-of-4.shop > li > div.js-item-controls.item__controls > a")
+                    buy_button.click()
+
+                    quantity_entry = browser.find_element_by_css_selector(css_selector="body > div:nth-child(13) > div > div > div:nth-child(2) > div:nth-child(5) > form > div.exchange-ui__controls > input")
+                    quantity_entry.clear()
+                    quantity_entry.send_keys(str(quantity))
+
+                    final_sale_button = browser.find_element_by_css_selector(css_selector="body > div:nth-child(13) > div > div > div:nth-child(2) > div:nth-child(5) > form > div.exchange-ui__submit-button-container > button")
+                    final_sale_button.click()
+
+                    close_button = browser.find_element_by_css_selector(css_selector="body > div:nth-child(13) > div > div > div.exchange-ui__close-button--md-up > span > span.fa.fa-inverse.fa-stack-1x.fa-close")
+                    close_button.click()
 
                 redemptions_button = browser.find_element_by_css_selector(css_selector="#main > div > span > div > div > div.nav.nav--stacked.nav--stacked--1-of-4.nav--stacked--roman > div > nav > ol > li:nth-child(10) > a")
                 redemptions_button.click()
@@ -481,63 +571,159 @@ def main():
                         plus_ten_button.click()
                         result = True
 
-                sleep(1)
+                final_sale_button = browser.find_element_by_css_selector(css_selector="body > div:nth-child(13) > div > div > div:nth-child(2) > div:nth-child(5) > form > div.exchange-ui__submit-button-container > button")
                 final_sale_button.click()
-                sleep(1)
+
+                close_button = browser.find_element_by_css_selector(css_selector="body > div:nth-child(13) > div > div > div.exchange-ui__close-button--md-up > span > span.fa.fa-inverse.fa-stack-1x.fa-close")
                 close_button.click()
 
                 current_step = 'go to labyrinth'
 
             elif current_step == 'go to labyrinth':
-                travel(browser, target='labyrinth of tigers')
+                travel(target='labyrinth of tigers')
                 current_step = 'favor trade'
 
             elif current_step == 'favor trade':
-                favor_trade(browser=browser)
-                current_step = 'depart london'
+                if tally_dict["winsome dispossessed orphan"] > 0:
+                    location_button(target_title="offering tribute to the court of the wakeful eye")
+                    storylet_button(target_title="offer a winsome dispossessed orphan")
+                    tally_dict = read_results(tally_dict)
+                    next_button()
+                else:
+                    current_step = 'depart london'
 
             elif current_step == 'depart london':
-                travel(browser, 'docks')
-                location_button(browser=browser, target_title="put to zee")
-                storylet_button(browser=browser, target_title="lay in supplies and sail")
-                next_button(browser=browser)
-                next_button(browser=browser)
+                try:
+                    travel('wolfstack docks')
+                except sexcept.ElementNotInteractableException:     # already there
+                    pass
+
+                location_button(target_title="put to zee")
+                storylet_button(target_title="lay in supplies and sail")
+                next_button()
+                next_button()
                 current_step = 'zailing to court'
 
             elif current_step == 'zailing to court':
-                if tally_dict['journeys end'] < 10:
-                    zailing(browser, tally_dict)
+                if tally_dict['approaching journeys end'] < 10:
+                    zailing(tally_dict)
                 else:
-                    location_button(browser=browser, target_title='across the southern archipelago')
-                    storylet_button(browser=browser, target_title="the court of the wakeful eye")
+                    location_button(target_title='across the southern archipelago')
+                    storylet_button(target_title="the court of the wakeful eye")
 
             elif current_step == 'enigma trade':
                 if tally_dict['tribute'] >= 20:
-                    storylet_button(browser, 'join the minister of enigmas for teatime')
-                    tally_dict = read_results(browser, tally_dict)
-                    next_button(browser)
+                    storylet_button('join the minister of enigmas for teatime')
+                    tally_dict = read_results(tally_dict)
+                    next_button()
                 else:
                     current_step = 'depart court'
 
             elif current_step == 'depart court':
-                location_button(browser=browser, target_title="set to zee")
-                next_button(browser)
+                storylet_button(target_title="set to zee")
+                next_button()
+                next_button()
 
                 current_step = "zailing to london"
 
             elif current_step == 'zailing to london':
                 if tally_dict['approaching journeys end'] < 10:
-                    zailing(browser, tally_dict)
+                    zailing(tally_dict)
                 else:
-                    location_button(browser=browser, target_title='across the southern archipelago')
-                    storylet_button(browser=browser, target_title="london")
+                    location_button(target_title='across the southern archipelago')
+                    storylet_button(target_title="london")
+                    next_button()
 
+            elif current_step == 'winking isle':
+                if tally_dict["seeking mr eatens name"] < 77:
+
+                    if tally_dict["fasting and meditating to a foolish end"] < 11:
+                        location_button(target_title='preparations')
+                        storylet_button(target_title='you have set aside jewels and riches')
+                    elif tally_dict["fasting and meditating to a foolish end"] < 22:
+                        location_button(target_title='preparations')
+                        storylet_button(target_title='you have given up your intrigues')
+                    elif tally_dict["fasting and meditating to a foolish end"] < 33:
+                        location_button(target_title='preparations')
+                        storylet_button(target_title='you have rejected wine and song')
+                    elif tally_dict["fasting and meditating to a foolish end"] < 44:
+                        location_button(target_title='preparations')
+                        storylet_button(target_title='no map knows the place you go')
+                    elif tally_dict["fasting and meditating to a foolish end"] < 55:
+                        location_button(target_title='preparations')
+                        storylet_button(target_title='no more sweet memories no more bitter')
+                    elif tally_dict["fasting and meditating to a foolish end"] < 66:
+                        location_button(target_title='preparations')
+                        storylet_button(target_title='you know nothing of stones light')
+                    elif tally_dict["fasting and meditating to a foolish end"] < 77:
+                        location_button(target_title='preparations')
+                        storylet_button(target_title='your chiefest treasures are gone')
+                        tally_dict = read_results(tally_dict)
+                        next_button()
+                        storylet_button(target_title='the lower mysteries')
+                    elif tally_dict["fasting and meditating to a foolish end"] < 100:
+                        location_button(target_title='the well')
+                        storylet_button(target_title='wait by the well')
+                    elif tally_dict["fasting and meditating to a foolish end"] < 10000:
+                        location_button(target_title='the well')
+                        storylet_button(target_title='circle the well')
+                    elif tally_dict["fasting and meditating to a foolish end"] >= 10000 and tally_dict["seeking mr eatens name"] >= 70:
+                        location_button(target_title='the well')
+                        storylet_button(target_title='understand')
+                    elif tally_dict["fasting and meditating to a foolish end"] < 60000 and tally_dict["seeking mr eatens name"] < 70:
+                        location_button(target_title='the well')
+                        storylet_button(target_title='circle the well')
+                    elif tally_dict["fasting and meditating to a foolish end"] >= 60000 and tally_dict["seeking mr eatens name"] < 70:
+                        location_button(target_title='the well')
+                        storylet_button(target_title='insight')
+
+                    tally_dict = read_results(tally_dict)
+                    next_button()
+                else:
+                    current_step = 'leave the isle'
+
+            elif current_step == 'leave the isle':
+                quit()
+
+            elif current_step == 'go to court':
+                travel(target='your lodgings')
+                location_button(target_title='find new stories chat with the local gossip')
+                storylet_button(target_title='speak to the bohemian sculptress')
+                storylet_button(target_title='into the empress court')
+                next_button()
+                current_step = 'at court'
+
+            elif current_step == 'at court':
+                target = 4*tally_dict['notability'] + 7
+                if tally_dict['making waves'] < target:
+                    location_button(target_title='the life of the mind')
+                    storylet_button(target_title='discuss politics at a salon')
+                    read_results(tally_dict)
+                    next_button()
+                else:
+                    draw()
+                    current_cards = []  # check_card()  todo: fix check_card
+
+                    if 'a visit from slowcakes amanuensis' in current_cards:
+                        pick_card(position=current_cards['a visit from slowcakes amanuensis'])
+                        storylet_button(target_title='i deserve a more emphatic typeface at the very least')
+                        tally_dict = read_results(tally_dict=tally_dict)
+                        next_button()
+                        draw()
+                    else:
+                        travel(target='your lodgings')
+                        location_button(target_title='attend to matters of society')
+                        storylet_button(target_title='use your influence to invite slowcakes amanuensis for a visit')
+                        next_button()
+                        storylet_button(target_title='i deserve a more emphatic type face at the very least')
+                        tally_dict = read_results(tally_dict=tally_dict)
+                        next_button()
+                        current_step = 'go to court'
 
         else:
             print("not enough actions, sleeping for 10 minutes.")
             sleep(600)
             browser.refresh()
-            sleep(10)
 
 if __name__ == '__main__':
     main()
