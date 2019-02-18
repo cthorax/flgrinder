@@ -67,7 +67,7 @@ def get_location():
     return location_text
 
 
-def location(tally_dict):
+def location(tally_dict):   #todo: make a location dict     #todo: remove tally_dict req and do all item based decisions in the base location step
     location_text = get_location()
 
     if location_text == "wolfstack docks" or location_text == 'your lodgings':
@@ -185,7 +185,7 @@ def check_tally():
 
     equipment_elements = browser.find_elements_by_class_name(name="icon--available-item")
     for item in equipment_elements:
-        not_used, item_name, also_not_used, quantity = item.get_attribute('innerHTML').split("><")
+        _, item_name, _, quantity = item.get_attribute('innerHTML').split("><")
         item_name = clean_text(item_name[8:].split("aria-label")[0][:-1])
         quantity = int(quantity.split(">")[1].split("<")[0])
 
@@ -193,7 +193,7 @@ def check_tally():
 
     item_elements = browser.find_elements_by_class_name(name="icon--inventory")
     for item in item_elements:
-        not_used, item_name, also_not_used, quantity = item.get_attribute('innerHTML').split("><")
+        _, item_name, _, quantity = item.get_attribute('innerHTML').split("><")
         item_name = clean_text(item_name[8:].split("aria-label")[0][:-1])
         quantity = int(quantity.split(">")[1].split("<")[0])
 
@@ -214,8 +214,12 @@ def update_tally(tally_dict, item_name, quantity):
 
 def check_actions():
     # check the current number of actions
-    actions_display = browser.find_element_by_class_name("item__desc")
-    actions = actions_display.text.split('\n')[1].split('/')[0]
+    try:
+        actions_display = browser.find_element_by_class_name("item__desc")
+        actions = actions_display.text.split('\n')[1].split('/')[0]
+    except (sexcept.NoSuchElementException, IndexError):
+        actions = 0
+        print('actions machine broke. understandable have a good day. ', end='')
 
     return int(actions)
 
@@ -243,18 +247,25 @@ def storylet_button(target_title, safe=True):
     for storylet in storylets:
         title = clean_text(storylet.find_element_by_class_name('branch__title').text)
         if title == target_title:
-            go_button = storylet.find_element_by_class_name('button--go')
-            disabled = 'disabled=""' in go_button.get_attribute('outerHTML')
+            try:
+                go_button = storylet.find_element_by_class_name('button--go')
+                disabled = 'disabled=""' in go_button.get_attribute('outerHTML')
 
-            if disabled:
-                result = False
-            else:
-                go_button.click()
-                result = True
-                break
+                if disabled:
+                    result = False
+                else:
+                    go_button.click()
+                    result = True
+                    break
+            except sexcept.StaleElementReferenceException:
+                print('oh no!')
 
     if safe:
-        assert result
+        try:
+            assert result
+        except AssertionError:
+            print('you did a bad job!')
+            raise
     return result
 
 
@@ -690,7 +701,9 @@ def main():
                 location_button(target_title='find new stories chat with the local gossip')
                 storylet_button(target_title='speak to the bohemian sculptress')
                 storylet_button(target_title='into the empress court')
-                next_button()
+
+                while get_location() != 'the empress court':
+                    next_button()
                 current_step = 'at court'
 
             elif current_step == 'at court':
