@@ -37,13 +37,7 @@ def login():
     input("hit enter when you've logged in, ya goober. ")
 
 
-def get_location():
-    """figure out where in the loop you are
-
-    :param browser: a selenium driver instance
-    :return:
-    """
-
+def get_location():   #todo: change from selector to class
     location_selector = "#root > div > div > div:nth-child(4) > div.content.container > div > div.col-tertiary > div > div > p.heading.heading--2"
     alt_location_selector = "#root > div > div > div:nth-child(5) > div.content.container > div > div.col-tertiary > div > div > p.heading.heading--2"
     perhaps_selector = "#main > div.buttons.buttons--left.buttons--storylet-exit-options > button"
@@ -67,61 +61,25 @@ def get_location():
     return location_text
 
 
-def location(tally_dict):   #todo: make a location dict     #todo: remove tally_dict req and do all item based decisions in the base location step
+def location():
+    locations_dict = {
+        "wolfstack docks": 'london',
+        "your lodgings":  'london',
+        "the forgotten quarter": 'go to nadir',
+        "cave of the nadir": 'at nadir',
+        "the labyrinth of tigers": 'favor trade",
+        "the broad unterzee": 'zailing',
+        "the court of the wakeful eye": 'enigma trade',
+        "court of the wakeful eye": 'enigma trade',
+        "winking isle": 'winking isle',
+        "the well": 'winking isle',
+        "the empress court": 'at court'
+    }
     location_text = get_location()
-
-    if location_text == "wolfstack docks" or location_text == 'your lodgings':
-        current_step = 'london'
-
-    elif location_text == "the forgotten quarter":
-        current_step = 'go to nadir'
-
-    elif location_text == "cave of the nadir":
-        current_step = 'at nadir'
-
-    elif location_text == "":
-        current_step = 'leave nadir'
-
-    elif location_text == "":
-        current_step = 'orphan trade'
-
-    elif location_text == "":
-        current_step = 'go to labyrinth'
-
-    elif location_text == "the labyrinth of tigers":
-        current_step = 'favor trade'
-
-    elif location_text == "":
-        current_step = 'depart london'
-
-    elif location_text == "the broad unterzee":
-        if tally_dict["searing enigma"] > 0:
-            current_step = 'zailing to london'
-        else:
-            current_step = 'zailing to court'
-
-    elif location_text == 'the court of the wakeful eye' or location_text == 'court of the wakeful eye':
-        current_step = 'enigma trade'
-
-    elif location_text == "":
-        current_step = 'depart court'
-
-    elif location_text == "winking isle" or location_text == "the well":
-        current_step = 'winking isle'
-
-    elif location_text == 'the empress court':
-        current_step = "at court"
-
-    return current_step
+    return locations_dict.get(location_text, 'unknown')
 
 
 def check_tally():
-    """update the internal counts of shit, return a dictionary of shit
-
-    :param browser: selenium driver instance
-    :return:
-    """
-
     tally_dict = {
         "tribute": 0,
         "irrigo": 0,
@@ -224,7 +182,7 @@ def check_actions():
     return int(actions)
 
 
-def travel(target):
+def travel(target, safe=True):
     # clicks on the map and then goes where the target is
     location = get_location()
     if location != target:
@@ -236,10 +194,13 @@ def travel(target):
             area_name = clean_text(area_button.find_element_by_class_name("map__image").get_attribute('outerHTML')[10:].split('"')[0])
             if target == area_name:
                 area_button.click()
-                return True
+                result = True
 
-        return False
+        result = False
 
+if safe:
+    assert result
+return result
 
 def storylet_button(target_title, safe=True):
     result = None
@@ -300,7 +261,7 @@ def draw():
     deck.click()
 
 
-def check_card(hand_size=3):
+def check_card(hand_size=3):    # todo: fix check_card
     card_selector = "#main > div.cards > div.hand > div:nth-child({position}) > div > div > div"
     card_dict = {}
     for pos in range(1, hand_size+1):     # +1?
@@ -318,7 +279,7 @@ def pick_card(position):
 
 def zailing(tally_dict):
     draw()
-    current_cards = check_card()
+    current_cards = check_card()    # todo: check_card is broken
 
     if 'a wily zailor' in current_cards:
         pick_card(position=current_cards['a wily zailor'])
@@ -338,7 +299,7 @@ def zailing(tally_dict):
 def read_results(tally_dict):
     results_list = browser.find_elements_by_class_name(name="quality-update__body")
     for result in results_list:
-        if "new total" in result.text:  # item updates
+        if "new total" in result.text:  # item updates to any number
             item_name, quantity = result.text.split(" x ")[1].split(" (new total ")
             item_name = clean_text(item_name)
             try:
@@ -370,13 +331,13 @@ def read_results(tally_dict):
                 quantity = int(quantity.split("!")[0])
             tally_dict = update_tally(tally_dict, item_name, quantity)
 
-        elif "An occurrence" in result.text:  # item updates
+        elif "An occurrence" in result.text:  # quality updates to any number
             item_name, quantity = result.text[21:].split("' Quality is now ")
             item_name = clean_text(item_name)
             quantity = int(quantity.split(' - ')[0])
             tally_dict = update_tally(tally_dict, item_name, quantity)
 
-        elif " Quality has gone!" in result.text:  # item updates
+        elif " Quality has gone!" in result.text:  # quality updates to zero
             item_name = result.text[6:-19]
             item_name = clean_text(item_name)
             tally_dict = update_tally(tally_dict, item_name, 0)
@@ -397,7 +358,15 @@ def main():
         actions = check_actions()
         if actions >= 5:
 
-            if current_step == 'london':
+            if current_step == 'unknown':
+                # todo: we dont know where we are! lets try a few things.
+                # lets just try again
+                current_step == location()
+                if current_step == 'unknown':
+                    # location will hit perhaps not if present so that's already done. check if travel to the lodgings is available
+                    travel(target='your lodgings')
+
+            elif current_step == 'london':
                 if tally_dict["seeking mr eatens name"] > 70:
                     current_step = 'go to court'
                 elif tally_dict['an earnest of payment'] > 0:
@@ -615,6 +584,12 @@ def main():
                 next_button()
                 current_step = 'zailing to court'
 
+            elif current_step == 'zailing':
+                if tally_dict["searing enigma"] > 0:
+                    current_step = 'zailing to london'
+                else:
+                    current_step = 'zailing to court'
+                
             elif current_step == 'zailing to court':
                 if tally_dict['approaching journeys end'] < 10:
                     zailing(tally_dict)
@@ -715,7 +690,7 @@ def main():
                     next_button()
                 else:
                     draw()
-                    current_cards = []  # check_card()  todo: fix check_card
+                    current_cards = []  # check_card()  todo: reimplement this
 
                     if 'a visit from slowcakes amanuensis' in current_cards:
                         pick_card(position=current_cards['a visit from slowcakes amanuensis'])
