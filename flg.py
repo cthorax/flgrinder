@@ -79,7 +79,8 @@ def location():
     return locations_dict.get(location_text, 'unknown')
 
 
-def check_tally():
+def init_tally():
+    global tally_dict
     tally_dict = {
         "tribute": 0,
         "irrigo": 0,
@@ -159,15 +160,11 @@ def check_tally():
 
     browser.get("https://www.fallenlondon.com/")
 
-    return tally_dict
 
-
-def update_tally(tally_dict, item_name, quantity):
+def update_tally(item_name, quantity):
     item_name = clean_text(item_name)
     if item_name in tally_dict.keys():
         tally_dict[item_name] = quantity
-
-    return tally_dict
 
 
 def check_actions():
@@ -277,26 +274,24 @@ def pick_card(position):
     card.click()
 
 
-def zailing(tally_dict):
+def zailing():
     draw()
     current_cards = check_card()    # todo: check_card is broken
 
     if 'a wily zailor' in current_cards:
         pick_card(position=current_cards['a wily zailor'])
         storylet_button(target_title='steam straight through the beechey currents ')
-        tally_dict = read_results(tally_dict=tally_dict)
+        read_results()
         next_button()
         draw()
     else:
         location_button(target_title='steam prudently')
         storylet_button(target_title='a cautious captain')
-        tally_dict = read_results(tally_dict=tally_dict)
+        read_results()
         next_button()
 
-    return tally_dict
 
-
-def read_results(tally_dict):
+def read_results():
     results_list = browser.find_elements_by_class_name(name="quality-update__body")
     for result in results_list:
         if "new total" in result.text:  # item updates to any number
@@ -308,19 +303,16 @@ def read_results(tally_dict):
                 quantity = quantity.split(" - ")[0]
                 quantity = clean_text(quantity).strip()
                 quantity = int(quantity)
-            tally_dict = update_tally(tally_dict, item_name, quantity)
 
         elif "shows your progress" in result.text:
             item_name, not_used, quantity = result.text.split("\n")
             quantity = int(quantity)
             item_name = clean_text(item_name.split(" shows your progress in the venture")[0])
-            tally_dict = update_tally(tally_dict, item_name, quantity)
 
         elif "gained a new quality" in result.text:
             item_name, quantity = result.text[29:].split(" at ")
             item_name = clean_text(item_name)
             quantity = int(quantity.split(" - ")[0])
-            tally_dict = update_tally(tally_dict, item_name, quantity)
 
         elif "has increased to" in result.text:
             item_name, quantity = result.text.split(" has increased to ")
@@ -329,21 +321,80 @@ def read_results(tally_dict):
                 quantity = int(quantity.split(" - ")[0])
             except ValueError:
                 quantity = int(quantity.split("!")[0])
-            tally_dict = update_tally(tally_dict, item_name, quantity)
 
         elif "An occurrence" in result.text:  # quality updates to any number
             item_name, quantity = result.text[21:].split("' Quality is now ")
             item_name = clean_text(item_name)
             quantity = int(quantity.split(' - ')[0])
-            tally_dict = update_tally(tally_dict, item_name, quantity)
 
         elif " Quality has gone!" in result.text:  # quality updates to zero
             item_name = result.text[6:-19]
             item_name = clean_text(item_name)
-            tally_dict = update_tally(tally_dict, item_name, 0)
+            quantity = 0
+
+        update_tally(item_name, quantity)
 
 
-    return tally_dict
+def notability_farm():
+    target = 4*tally_dict['notability'] + 7
+    if tally_dict['making waves'] < target:
+        location_button(target_title='the life of the mind')
+        storylet_button(target_title='discuss politics at a salon')
+        read_results()
+        next_button()
+        current_step = 'at court'
+    else:
+        draw()
+        current_cards = []  # check_card()  todo: reimplement this
+
+        if 'a visit from slowcakes amanuensis' in current_cards:
+            pick_card(position=current_cards['a visit from slowcakes amanuensis'])
+            storylet_button(target_title='i deserve a more emphatic typeface at the very least')
+            read_results()
+            next_button()
+            draw()
+        else:
+            travel(target='your lodgings')
+            location_button(target_title='attend to matters of society')
+            storylet_button(target_title='use your influence to invite slowcakes amanuensis for a visit')
+            next_button()
+            storylet_button(target_title='i deserve a more emphatic type face at the very least')
+            read_results()
+            next_button()
+            current_step = 'go to court'
+
+    return current_step
+
+
+def unknown_location():
+    # todo: we dont know where we are! lets try a few things.
+    # lets just try again
+    current_step == location()
+    if current_step == 'unknown':
+        # location will hit perhaps not if present so that's already done. check if travel to the lodgings is available
+        result = travel(target='your lodgings', safe=False)
+        if not result:
+            # well now what??
+            pass
+          
+    return current_step
+
+
+def london_hub():
+    if tally_dict["seeking mr eatens name"] > 70:
+        current_step = 'go to court'
+    elif tally_dict['an earnest of payment'] > 0:
+        current_step = 'payment'
+    elif tally_dict['searing enigma'] > 0 or tally_dict['winsome dispossessed orphan'] == 0:
+        current_step = 'orphan trade'
+    elif tally_dict['fleeting recollections'] == 1:
+        current_step = 'clear irrigo'
+    elif tally_dict["winsome dispossessed orphan"] > 0:
+        current_step = 'go to labyrinth'
+    elif tally_dict["tribute"] > 19:
+        current_step = 'depart london'
+
+    return current_step
 
 
 def main():
@@ -351,20 +402,36 @@ def main():
     browser = webdriver.Chrome("chromedriver.exe", options=chrome_options)
     browser.implicitly_wait(10)
     login()
-    tally_dict = check_tally()
-    current_step = location(tally_dict)
+    init_tally()
+    current_step = location()
 
+    # todo: implement this        
+    '''   
+    function_dict = {
+        'unknown': unknown_location,
+        'london': london_hub,
+    }
+    '''
+    
     while True:
         actions = check_actions()
         if actions >= 5:
-
+          
+            # todo: implement this
+            """
+            location_function = function_dict['current_step']
+            current_step = location_function.__call__()
+            """
+            
             if current_step == 'unknown':
                 # todo: we dont know where we are! lets try a few things.
                 # lets just try again
                 current_step == location()
                 if current_step == 'unknown':
                     # location will hit perhaps not if present so that's already done. check if travel to the lodgings is available
-                    travel(target='your lodgings')
+                    result = travel(target='your lodgings', safe=False)
+                    if not result:
+                        # well now what??
 
             elif current_step == 'london':
                 if tally_dict["seeking mr eatens name"] > 70:
@@ -407,7 +474,7 @@ def main():
             elif current_step == 'go to nadir':
                 if tally_dict['irrigo'] >= 1:
                     travel(target='your lodgings')
-                    current_step = 'leave nadir'
+                    current_step = 'london'
                 else:
                     travel(target='the forgotten quarter')
                     location_button(target_title="return to the cave of the nadir")
